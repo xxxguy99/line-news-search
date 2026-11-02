@@ -155,16 +155,27 @@
    <div class="info">แหล่ง: ${esc(A(r.source_groups).join(", "))}${A(r.source_senders).length?" · ผู้ส่ง: "+esc(A(r.source_senders).join(", ")):""}${r.has_attachment?" · มีไฟล์แนบ":""}</div>
    <div class="links"><button type="button" class="btn-detail" data-id="${esc(r.txt_id)}">แสดงรายละเอียด</button></div><div class="detail" hidden></div></article>`).join("");
  }
- // แผงรายละเอียด: ใช้ตัวชี้ใน index → getItem (mock text) · ดาวน์โหลด mock
+ // แผงรายละเอียด: รองรับทั้ง mock แบน และ live {ok,action,item:{…}} (สัญญา AI-Admin)
+ function normalizeGetItem(d){
+  const it=d.item||d, ids=it.attachment_ids||[], urls=it.attachment_urls||[];
+  let atts=it.attachments;
+  if(!atts) atts=ids.map((id,i)=>({id,name:id,url:urls[i]||""}));
+  else atts=atts.map((a,i)=>typeof a==="string"?{id:a,name:a,url:urls[i]||""}:{id:a.id||ids[i]||"",name:a.name||a.id||ids[i]||"",url:a.url||urls[i]||""});
+  const text=it.text!=null?String(it.text):[it.title,it.summary].filter(Boolean).join("\n\n");
+  return{ok:!!d.ok,txt_id:it.txt_id||"",txt_url:it.txt_url||"",text:text||"(API ไม่ฝังเนื้อหาเต็ม — เปิดลิงก์ต้นฉบับด้านล่าง)",attachments:atts,hasBody:it.text!=null};
+ }
  $("results").addEventListener("click",async e=>{const b=e.target.closest(".btn-detail");if(!b)return;
   const box=b.closest(".item").querySelector(".detail");if(!box.hidden){box.hidden=true;b.textContent="แสดงรายละเอียด";return;}
   box.hidden=false;b.textContent="ซ่อนรายละเอียด";box.innerHTML='<div class="dmeta">กำลังดึงตามตัวชี้ใน index…</div>';
-  try{const d=await api("getItem",{txt_id:b.dataset.id});if(!d.ok)throw new Error(d.error);
-   box.innerHTML=`<div class="dmeta">ตัวชี้ใน index: <code>txt_url</code> ${esc(d.txt_url)}${d.attachments.length?` · <code>attachment_ids</code> ${esc(d.attachments.map(a=>a.id).join(", "))}`:""} <span class="lockbadge">สิทธิ์ดูต้นฉบับ: รอล็อก backend</span></div>
+  try{const raw=await api("getItem",{txt_id:b.dataset.id});if(!raw.ok)throw new Error(raw.error||"ไม่สำเร็จ");
+   const d=normalizeGetItem(raw);
+   const attMeta=d.attachments.length?` · แนบ ${d.attachments.length} ไฟล์`:"";
+   const txtLink=d.txt_url?` <a href="${esc(safeUrl(d.txt_url))}" target="_blank" rel="noopener">เปิด .txt</a>`:"";
+   box.innerHTML=`<div class="dmeta"><code>${esc(d.txt_id)}</code>${txtLink}${attMeta}${d.hasBody?"":' <span class="lockbadge">เนื้อหาเต็มอยู่บน Drive (ยังไม่แชร์ 90)</span>'}</div>
     <pre class="dtext">${esc(d.text)}</pre>
-    <div class="dl"><button type="button" class="btn-sm dl-txt">ดาวน์โหลด .txt (mock)</button>${d.attachments.map(a=>`<button type="button" class="btn-lock" disabled>แนบ: ${esc(a.name)} <small>(รอล็อกสิทธิ์)</small></button>`).join("")}</div>`;
-   box.querySelector(".dl-txt").onclick=()=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([d.text],{type:"text/plain"}));a.download=d.txt_id+".txt";a.click();};
-  }catch(err){box.innerHTML='<div class="dmeta">ดึงรายละเอียดไม่สำเร็จ — โปรดลองใหม่</div>';}});
+    <div class="dl">${d.hasBody?`<button type="button" class="btn-sm dl-txt">ดาวน์โหลด .txt</button>`:""}${d.attachments.map(a=>a.url?`<a class="btn-sm" href="${esc(safeUrl(a.url))}" target="_blank" rel="noopener">แนบ: ${esc(a.name||a.id)}</a>`:`<button type="button" class="btn-lock" disabled>แนบ: ${esc(a.name||a.id)}</button>`).join("")}</div>`;
+   const dl=box.querySelector(".dl-txt");if(dl)dl.onclick=()=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([d.text],{type:"text/plain"}));a.download=(d.txt_id||"item")+".txt";a.click();};
+  }catch(err){box.innerHTML='<div class="dmeta">ดึงรายละเอียดไม่สำเร็จ — '+esc(err&&err.message||"โปรดลองใหม่")+'</div>';}});
  async function doSearch(){$("meta").textContent="กำลังค้น…";
   try{const r=await api("searchIndex",params());if(!r.ok){queued=true;$("meta").textContent="รับคำค้นแล้ว — ถังยังไม่ว่าง กำลังปลุก admin bot จัดเสร็จจะค้นให้";ready=false;refresh();return;}render(r);}catch(err){$("meta").textContent="ค้นไม่สำเร็จ — โปรดลองใหม่ภายหลัง";}}
  $("form").addEventListener("submit",async e=>{e.preventDefault();
