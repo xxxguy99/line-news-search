@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ค้นหาคลังข่าว LINE</title><link rel="stylesheet" href="styles.css"></head>
+<body>
+<header class="top"><div class="wrap"><h1>ค้นหาคลังข่าว LINE</h1><p class="sub">ค้นจากดัชนี AI-Index และพจนานุกรมรหัส (dict) · สำหรับเจ้าหน้าที่กองข่าว</p></div></header>
+<main class="wrap">
+ <div id="mockTag" class="mocktag" hidden>โหมดพรีวิว (MOCK) — ข้อมูลจำลอง ไม่เชื่อมต่อระบบจริง</div>
+ <section id="status" class="status"><span id="statusText">กำลังตรวจสถานะ…</span><button id="btnSort" class="btn-sm" type="button" hidden>จัดถัง <small>(ผู้ดูแล — รอล็อกสิทธิ์)</small></button></section>
+ <form id="form" class="card">
+  <label class="lbl" for="q">คำค้นรวม</label>
+  <input id="q" class="q" type="search" placeholder="ชื่อคน องค์กร สถานที่ ประเทศ หรือคำทั่วไป" autocomplete="off">
+  <fieldset class="range-box">
+   <legend class="lbl">ช่วงข่าว</legend>
+   <div class="mode" role="radiogroup" aria-label="รูปแบบเลือกช่วงวัน">
+    <label><input type="radio" name="dmode" value="year" checked> ในปีเดียวกัน (สไลด์)</label>
+    <label><input type="radio" name="dmode" value="cal"> ข้ามปี (ปฏิทิน)</label>
+   </div>
+   <div id="modeYear">
+    <div class="yearrow"><label class="lbl" for="yearSel">ปี</label><select id="yearSel"></select><span class="hint">เลื่อนจุดเริ่ม–สิ้นสุดภายในปีที่เลือก</span></div>
+    <div class="range-labels"><span>เริ่ม <b id="lblFrom">–</b></span><span>สิ้นสุด <b id="lblTo">–</b></span></div>
+    <div class="dual"><div class="track"><div id="fill" class="fill"></div></div>
+     <input id="rFrom" type="range" aria-label="วันที่เริ่ม"><input id="rTo" type="range" aria-label="วันที่สิ้นสุด"></div>
+    <div class="range-ends"><span id="minLbl"></span><button type="button" id="rReset" class="link">ทั้งปี</button><span id="maxLbl"></span></div>
+   </div>
+   <div id="modeCal" hidden>
+    <div class="calrow"><div><label class="lbl" for="dFrom">วันเริ่ม</label><input id="dFrom" type="date"></div>
+    <div><label class="lbl" for="dTo">วันสิ้นสุด</label><input id="dTo" type="date"></div></div>
+    <p class="hint">ค้นข้ามปีได้ เช่น ธ.ค. ปีก่อน – ม.ค. ปีนี้ · เว้นว่าง = ไม่จำกัด</p>
+   </div>
+  </fieldset>
+  <!-- เอนทิตี: ชิป multi-select จาก dict (ค่าที่ส่ง = รหัส) -->
+  <div class="ents">
+   <div class="ent" data-type="countries"><div class="lbl">ประเทศ</div><div class="chips"></div></div>
+   <div class="ent" data-type="persons"><div class="lbl">บุคคล</div><div class="chips"></div></div>
+   <div class="ent" data-type="orgs"><div class="lbl">องค์กร</div><div class="chips"></div></div>
+   <div class="ent" data-type="places"><div class="lbl">สถานที่</div><div class="chips"></div></div>
+   <div class="ent" data-type="groups"><div class="lbl">กลุ่มที่มา</div><div class="chips"></div></div>
+  </div>
+  <!-- โซนตัวกรอง: เพิ่ม <div class="f"> ได้เลย -->
+  <div class="filters" id="filters">
+   <div class="f"><label class="lbl" for="cat">หมวด</label><select id="cat"><option value="">ทุกหมวด</option></select></div>
+   <div class="f"><label class="lbl" for="storyStatus">สถานะเรื่อง</label><select id="storyStatus"><option value="">ทั้งหมด</option><option>ใหม่</option><option>ติดตาม</option><option>จบ</option></select></div>
+  </div>
+  <details class="more"><summary>ตัวกรองเพิ่ม</summary>
+   <div class="filters">
+    <div class="f"><label class="lbl" for="thread">เรื่องต่อเนื่อง (รหัส S-)</label><input id="thread" list="threadList" placeholder="เช่น S-0012"><datalist id="threadList"></datalist></div>
+    <div class="f"><label class="lbl" for="sender">ผู้ส่ง</label><input id="sender" list="senderList" placeholder="ชื่อผู้ส่ง"><datalist id="senderList"></datalist></div>
+    <div class="f chk"><label><input type="checkbox" id="hasAtt"> มีไฟล์แนบ</label><label><input type="checkbox" id="ocrOnly"> ใช้ OCR</label></div>
+   </div>
+  </details>
+  <div class="actions"><button id="btnSearch" class="btn" type="submit">ค้นหา</button><button id="btnClear" class="btn2" type="button">ล้างตัวกรอง</button></div>
+  <p id="warn" class="warn" hidden></p>
+ </form>
+ <section id="meta" class="meta"></section>
+ <section id="results"></section>
+</main>
+<footer class="foot wrap">บัญชีระบบ ooi.gp702 · หน้านี้ไม่เก็บรหัสผ่านหรือข้อมูลเข้าระบบใด ๆ · ห้วงทดสอบ: ใครมีลิงก์เข้าได้ (ชั่วคราว)</footer>
+<script src="config.js" onerror="void 0"></script>
+<script src="mock-data.js"></script>
+<script src="app.js"></script>
+</body></html>
